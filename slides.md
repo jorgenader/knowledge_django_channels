@@ -64,14 +64,14 @@ Note:
     Communication via ASGI protocol
     
     - Daphne
-      - asgiref and different backends
+    - asgiref and different backends
         - memory
         - redis
         - POSIX IPC
 
 ***
 
-#### Setting up Channels
+### Setting up
 
 ```
 pip install django channels asgi_redi
@@ -116,8 +116,7 @@ def ws_connect(message):
    Group('friends').add(message.reply_channel)
 
 def ws_disconnect(message):
-   message.reply_channel.send({'accept': True})
-   Group('friends').add(message.reply_channel)
+   Group('friends').discard(message.reply_channel)
    
 def ws_receive(message):
     Group('friends').add({'text': message[text]})
@@ -134,9 +133,96 @@ worker: python manage.py runworker
 
 ***
 
+## Generic consumer & Multiplexing
+
+- Class-based
+- Automatic group join/leave
+- Single channel for multiple consumer
+
+---
+
+```
+class MyConsumer(WebsocketConsumer):
+    http_user = True
+
+    def connection_groups(self, **kwargs):
+        return ["test"]
+
+    def connect(self, message, **kwargs):
+        self.message.reply_channel.send({"accept": True})
+
+    def receive(self, text=None, bytes=None, **kwargs):
+        # Simple echo
+        self.send(text=text, bytes=bytes)
+
+    def disconnect(self, message, **kwargs):
+        pass
+```
+
+---
+
+```
+class EchoConsumer(websockets.JsonWebsocketConsumer):
+    def connect(self, message, multiplexer, **kwargs):
+        multiplexer.send({"status": "I just connected!"})
+
+    def disconnect(self, message, multiplexer, **kwargs):
+        print("Stream %s is closed" % multiplexer.stream)
+
+    def receive(self, content, multiplexer, **kwargs):
+        # Simple echo
+        multiplexer.send({"original_message": content})
+
+class Demultiplexer(WebsocketDemultiplexer):
+    # Wire your JSON consumers here: {stream_name : consumer}
+    consumers = {
+        "echo": EchoConsumer,
+        "other": AnotherConsumer,
+    }
+```
+
+***
+
+## Data binding
+- Works two way
+  - Changes through Django are sent to clients
+  - Clients can create/update/delete 
+- Limitations
+  - Any change outside of Django (or with `QuerySet.update`)
+  - Serialization (built-in Django)
+
+---
+
+```
+class IntegerValue(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    value = models.IntegerField(default=0)
+
+class IntegerValueBinding(WebsocketBinding):
+    model = IntegerValue
+    stream = "intval"
+    fields = ["name", "value"]
+
+    @classmethod
+    def group_names(cls, instance):
+        return ["intval-updates"]
+
+    def has_permission(self, user, action, pk):
+        return True
+
+class Demultiplexer(WebsocketDemultiplexer):
+    consumers = {
+        "intval": IntegerValueBinding.consumer,
+    }
+    def connection_groups(self):
+        return ["intval-updates"]
+```
+
+***
+
 ## Thank you
 
 - Testing Project: [metsavaht/no-design-slack-clone](https://github.com/metsavaht/no-design-slack-clone)
-- Example Project: [andrewgodwin/channels-examples](https://github.com/andrewgodwin/channels-examples)
+- Examples: [andrewgodwin/channels-examples](https://github.com/andrewgodwin/channels-examples)
 - Slides: [metsavaht/knowledge_django_channels](https://github.com/metsavaht/knowledge_django_channels)
-- ASGI [Spec](http://channels.readthedocs.io/en/latest/asgi.html)
+- [ASGI Spec](http://channels.readthedocs.io/en/latest/asgi.html)
