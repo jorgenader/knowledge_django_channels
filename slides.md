@@ -62,10 +62,16 @@ Note:
     - One that runs views, websocket handlers and background tasks (consumers)
     
     Communication via ASGI protocol
+    
+    - Daphne
+      - asgiref and different backends
+        - memory
+        - redis
+        - POSIX IPC
 
 ***
 
-Setting up Channels
+#### Setting up Channels
 
 ```
 pip install django channels asgi_redi
@@ -73,7 +79,7 @@ pip install django channels asgi_redi
 
 ---
 
-settings.py
+#### settings.py
 
 ```
 CHANNEL_LAYERS = {
@@ -89,7 +95,7 @@ CHANNEL_LAYERS = {
 
 ---
 
-routing.py
+#### routing.py
 
 ```
 channel_routing = [
@@ -102,7 +108,7 @@ channel_routing = [
 
 ---
 
-consumers.py
+#### consumers.py
 
 ```
 def ws_connect(message):
@@ -119,7 +125,7 @@ def ws_receive(message):
 
 ---
 
-Running
+#### Running
 
 ```
 web: daphne example.asgi:channel_layer
