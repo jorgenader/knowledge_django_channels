@@ -2,7 +2,6 @@
 
 Jörgen Ader
 
-- Twitter: [@JorgenAder](https://twitter.com/JorgenAder)
 - GitHub: [github.com/metsavaht](https://github.com/metsavaht)
 - Project: [django/channels](https://github.com/django/channels)
 - Example Project: [metsavaht/no-design-slack-clone](https://github.com/metsavaht/no-design-slack-clone)
